@@ -1,0 +1,17 @@
+{
+  "name": "little-life",
+  "version": "1.0.0",
+  "description": "A 3D town where an AI creature lives its own life.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "three": "0.160.0",
+    "tone": "14.7.77"
+  },
+  "devDependencies": {
+    "electron": "33.2.1"
+  }
+}

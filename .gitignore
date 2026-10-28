@@ -1,0 +1,16 @@
+# Installed dependencies; vendor the two runtime libraries
+node_modules/*
+!node_modules/three/
+!node_modules/tone/
+
+# Runtime output and backups
+debug/
+debug-backup-*/
+_backup/
+
+# Archives, temporary download errors, and generated root reports
+*.zip
+assets/downloads/
+/kaykit-list.txt
+/quaternius-list.txt
+/*.txt

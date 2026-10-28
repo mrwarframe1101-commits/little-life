@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Little Life v2.9</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' app:; script-src 'self' app: 'unsafe-inline'; style-src 'self' app: 'unsafe-inline'; img-src 'self' app: data: blob:; media-src 'self' app: blob: data:; connect-src 'self' app: data: blob:; worker-src blob:">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "app://local/node_modules/three/build/three.module.js",
+  "three/addons/": "app://local/node_modules/three/examples/jsm/"
+} }
+</script>
+<script src="app://local/node_modules/tone/build/Tone.js"></script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="labels" aria-hidden="true"></div>
+<div id="bubble" class="bubble" hidden><span id="bubbleText"></span></div>
+
+<header class="hud-left glass" id="townCard">
+  <h1 id="townName">Little Life</h1>
+  <div class="sub" id="whoLine">Nobody lives here yet</div><div class="sub" style="opacity:.6;font-size:11px">v2.9</div>
+  <div class="clockrow"><span class="dot" id="liveDot"></span><span id="clock">—</span><span class="weather" id="weather"></span></div>
+</header>
+
+<nav class="toolbar glass" aria-label="Controls">
+  <button id="watchBtn" class="primary" title="Space">Watch</button>
+  <div class="seg" id="speedSeg" role="group" aria-label="Speed">
+    <button data-speed="1" aria-pressed="true">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button><button data-speed="8">8×</button>
+  </div>
+  <div class="seg" id="camSeg" role="group" aria-label="Camera">
+    <button data-cam="follow" aria-pressed="true" title="1">Follow</button><button data-cam="cinematic" title="2">Cinematic</button><button data-cam="free" title="3">Free</button><button data-cam="overview" title="4">Whole town</button>
+  </div>
+  <button id="musicBtn" aria-pressed="true" title="M">Music on</button>
+  <button id="labelsBtn" aria-pressed="true" title="L">Names</button>
+  <button id="panelBtn" aria-pressed="true" title="Tab">Notes</button>
+  <button id="settingsBtn" title="Settings">Settings</button>
+</nav>
+
+<aside class="panel glass" id="panel">
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="now" aria-selected="true">Now</button>
+    <button role="tab" data-tab="build" aria-selected="false">Build</button>
+    <button role="tab" data-tab="diary" aria-selected="false">Diary</button>
+    <button role="tab" data-tab="made" aria-selected="false">Made<span class="count" id="madeCount"></span></button>
+    <button role="tab" data-tab="music" aria-selected="false">Music<span class="count" id="musicCount"></span></button>
+    <button role="tab" data-tab="about" aria-selected="false">About</button>
+  </div>
+  <div class="pane" id="pane-now"></div>
+  <div class="pane" id="pane-build" hidden></div>
+  <div class="pane" id="pane-diary" hidden></div>
+  <div class="pane" id="pane-made" hidden></div>
+  <div class="pane" id="pane-music" hidden></div>
+  <div class="pane" id="pane-about" hidden></div>
+</aside>
+
+<section class="nowplaying glass" id="nowPlaying" hidden>
+  <div class="np-top"><div><div class="np-label">Now playing</div><div class="np-title" id="npTitle"></div><div class="np-by" id="npBy"></div></div><button id="npStop" class="small">Stop</button></div>
+  <canvas id="npRoll" width="560" height="120"></canvas>
+  <div class="np-bar"><i id="npBar"></i></div>
+</section>
+
+<div class="toast glass" id="toast" hidden></div>
+
+<div class="modal" id="setup" hidden>
+  <div class="card glass">
+    <h2 id="setupTitle">Welcome to Little Life</h2>
+    <p id="setupIntro">A small creature is about to wake up in a wild forest with nothing. It will invent itself, dream up the town it wants, and build it all by hand. You just watch.</p>
+    <label for="keyInput">Anthropic API key <span class="hint" id="keyState"></span></label>
+    <input id="keyInput" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+    <p class="fine">Get one at console.anthropic.com → API Keys (add a few dollars of credit first). The key stays on this PC, in your Little Life settings file.</p>
+    <label for="modelSel">Brain</label>
+    <select id="modelSel">
+      <option value="claude-haiku-5-5">Claude Haiku 5.5 · quick and very cheap (about 2–5¢ an hour)</option>
+      <option value="claude-sonnet-5-5">Claude Sonnet 5.5 · deeper thinking, better music (about 30–50¢ an hour)</option>
+      <option value="claude-opus-5-5">Claude Opus 5.5 · the most thoughtful, costs the most</option>
+    </select>
+    <details id="customApi"><summary>Use a different AI service</summary>
+      <p class="fine">For keys from services other than Anthropic. Ask whoever gave you the key for its base URL and model names.</p>
+      <label for="apiBase">Base URL</label><input id="apiBase" type="text" placeholder="https://api.example.com/v1" spellcheck="false">
+      <div class="row2"><div><label for="apiFormat">Format</label><select id="apiFormat"><option value="anthropic">Anthropic (Messages API)</option><option value="openai">OpenAI-compatible (chat completions)</option></select></div>
+      <div><label for="modelName">Model name</label><input id="modelName" type="text" placeholder="e.g. claude-haiku-5-5" spellcheck="false"></div></div>
+      <button id="testApi" class="small">Test connection</button> <span class="status" id="testStatus"></span>
+    </details>
+    <div class="row2">
+      <div><label for="qualitySel">Graphics</label>
+        <select id="qualitySel"><option value="low">Low</option><option value="medium">Medium</option><option value="high" selected>High</option><option value="ultra">Ultra</option></select></div>
+      <div><label for="volRange">Volume</label><input id="volRange" type="range" min="0" max="1" step="0.05" value="0.8"></div>
+    </div>
+    <p class="fine" id="qualityNote">Graphics changes apply after restarting the app.</p>
+    <div class="actions">
+      <button id="saveSettings">Save</button>
+      <button id="beginBtn" class="primary">Begin a life</button>
+      <span class="status" id="setupStatus"></span>
+    </div>
+    <details class="danger"><summary>More</summary>
+      <p class="fine">Spent so far (estimate): <b id="spend">$0.00</b></p>
+      <button id="openSave" class="small">Open save folder</button>
+      <button id="newLife" class="small warn">Start a new life…</button>
+      <div id="confirmNew" hidden><p class="fine">This retires the current creature's save (kept in the save folder) and starts over.</p><button id="confirmNewBtn" class="small warn">Yes, start over</button></div>
+    </details>
+  </div>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div><p id="loadingText">Building the world…</p></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
